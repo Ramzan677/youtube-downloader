@@ -1,0 +1,13 @@
+{
+    "name": "youtube-downloader",
+    "version": "1.0.0",
+    "scripts": {
+        "start": "serve public"
+    },
+    "dependencies": {
+        "youtube-dl-exec": "^2.1.0"
+    },
+    "devDependencies": {
+        "serve": "^14.0.1"
+    }
+}
