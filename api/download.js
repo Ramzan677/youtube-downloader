@@ -1,59 +1,38 @@
 const axios = require('axios');
 
 module.exports = async (req, res) => {
-    // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
     
     try {
-        const { url, format = 'mp4' } = req.query;
-        
-        // 1. Validate input
-        if (!url) {
-            return res.status(400).json({ error: 'URL parameter is required' });
-        }
+        const { url } = req.query;
+        if (!url) return res.status(400).json({ error: 'URL is required' });
 
-        // 2. Extract video ID (improved regex)
+        // Extract video ID
         const videoId = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&\n?#]+)/)?.[1];
-        if (!videoId) {
-            return res.status(400).json({ error: 'Invalid YouTube URL' });
+        if (!videoId) return res.status(400).json({ error: 'Invalid YouTube URL' });
+
+        // Use a working API (savevid.works)
+        const apiUrl = `https://backend.savethevideo.com/info?url=https://youtu.be/${videoId}`;
+        const response = await axios.get(apiUrl);
+
+        if (!response.data.success) {
+            throw new Error(response.data.message || "Failed to fetch download links");
         }
 
-        // 3. Get video info from YouTube
-        const infoResponse = await axios.get(
-            `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
-        );
-
-        // 4. Get download links from yt1s API
-        const downloadResponse = await axios.post(
-            'https://yt1s.com/api/ajaxSearch/index',
-            new URLSearchParams({
-                q: `https://www.youtube.com/watch?v=${videoId}`,
-                vt: format
-            }),
-            {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
-            }
-        );
-
-        // 5. Construct response
+        // Return download links
         res.json({
             status: 'success',
             videoId,
-            title: infoResponse.data.title,
+            title: response.data.meta.title,
             thumbnail: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-            formats: downloadResponse.data.links,
-            timestamp: new Date().toISOString()
+            formats: response.data.links
         });
 
     } catch (error) {
-        console.error('API Error:', error);
+        console.error("API Error:", error.message);
         res.status(500).json({ 
             error: 'Failed to process video',
-            details: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            details: error.message 
         });
     }
 };
