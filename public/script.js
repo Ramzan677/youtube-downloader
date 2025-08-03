@@ -1,60 +1,29 @@
-document.getElementById('download-btn').addEventListener('click', async () => {
-    // ... existing code ...
-
+async function fetchDownloadLinks(videoId, format) {
     try {
-        const response = await fetch(`/api/download?url=${encodeURIComponent(url)}`);
+        const response = await fetch(`/api/download?url=https://youtu.be/${videoId}&format=${format}`);
         const data = await response.json();
         
-        if (data.error) {
-            throw new Error(data.error);
-        }
-
-        // New handling for the download URL
-        if (data.downloadUrl) {
-            // First call to get download links
-            const dlResponse = await fetch(data.downloadUrl, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            });
-            const dlData = await dlResponse.json();
-            
-            if (dlData.links && dlData.links.mp4) {
-                data.downloadLinks = dlData.links.mp4;
-            }
-        }
-
-        displayResults(data);
+        if (data.error) throw new Error(data.error);
+        if (!data.formats) throw new Error('No download formats available');
+        
+        return data;
     } catch (error) {
-        showError(error.message || 'Failed to download video');
-        console.error(error);
+        console.error('Download failed:', error);
+        throw error;
     }
-    // ... rest of the code ...
-});
+}
 
-function displayResults(data) {
-    document.getElementById('title').textContent = data.title || 'Untitled';
-    document.getElementById('thumbnail').src = data.thumbnail || '';
+function displayDownloadOptions(formats) {
+    const container = document.getElementById('download-options');
+    container.innerHTML = '';
     
-    const optionsContainer = document.getElementById('download-options');
-    optionsContainer.innerHTML = '';
-    
-    if (data.downloadLinks) {
-        Object.entries(data.downloadLinks).forEach(([quality, link]) => {
-            const btn = document.createElement('a');
-            btn.href = link;
-            btn.className = 'download-btn';
-            btn.textContent = `Download ${quality}p`;
-            btn.target = '_blank';
-            optionsContainer.appendChild(btn);
-        });
-    } else if (data.downloadUrl) {
+    Object.entries(formats).forEach(([quality, info]) => {
         const btn = document.createElement('a');
-        btn.href = data.downloadUrl;
+        btn.href = info.url;
         btn.className = 'download-btn';
-        btn.textContent = 'Get Download Options';
+        btn.textContent = `${quality} (${info.size})`;
         btn.target = '_blank';
-        optionsContainer.appendChild(btn);
-    }
+        btn.download = true;
+        container.appendChild(btn);
+    });
 }
